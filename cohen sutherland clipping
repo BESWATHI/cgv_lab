@@ -1,147 +1,145 @@
-#include<stdio.h> 
-#include<GL/glut.h> 
-#define opcode int
-enum
+#include<stdio.h>
+#include<GL/glut.h>
+float xmin = 50, ymin = 50, xmax = 100, ymax = 100;
+float xvmin = 200, yvmin = 200, xvmax = 400, yvmax = 400;
+int RIGHT = 8, LEFT = 2, TOP = 4, BOTTOM = 1;
+float sx, sy, vx1, vy1, vx2, vy2;
+float X1, Y1, X2, Y2;
+int compute(float x, float y)
 {
-	top = 0x8, bottom = 0x4, left = 0x1, right = 0x2
-};
-float xmin, xmax, ymin, ymax, umin, umax, vmin, vmax; float x1, y1, x2, y2;
-void myinit()
-{
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluOrtho2D(0, 500, 0, 500);
-	glMatrixMode(GL_MODELVIEW);
-}
-opcode compopcode(float x, float y)
-{
-	int p = 0; 
-	if (x < xmin)p = p | left;
-	if (x > xmax)p = p|right; 
-	if (y < ymin)p = p | bottom; 
-	if (y > ymax)p = p | top;
-	return p;
-}
-void cohensutherland()
-{
-	bool accept = false, done = false;
-	int x = 0, y = 0;
-	opcode p1, p2, p;
-	p1 = compopcode(x1,y1); 
-	p2 = compopcode(x2, y2);
-	float m = (y2 - y1) / (x2 - x1);
-	do {
-		if (!(p1 | p2))
-		{
-			accept = true; done = true;
-		}
-		else if (p1 & p2)
-			done = true;
-		else
-			
-		{
-			p = p1 ? p1 : p2;
-			if (p & bottom)
-			{
-				y = ymin;
-				x = x1 + (ymin - y1) / m;
-			}
-			if(p & top)
-			{
-				y=ymax;
-				x = x1 + (ymax - y1) / m;
-			}
-			if (p & right)
-			{
-				x = xmax;
-				y = y1 + (xmax - x1) * m;
-			}
-			if (p & left)
-			{
-				x = xmin;
-				y = y1 + (xmin - x1) * m;
-			}
-			if (p == p2)
-			{
-				x2 = x;
-				y2 = y;
-				p2 = compopcode(x2, y2);
-			}
-			if (p == p1)
-			{
-				x1 = x;
-				y1 = y;
-				p2 = compopcode(x1, y1);
-			}
-			
-			
+	int code = 0;
+	if (y > ymax)
+		code = TOP;
 
+	else if (y < ymin)
+		code = BOTTOM;
+
+	if (x > xmax)
+		code = RIGHT;
+
+	else if (x < xmin)
+		code = LEFT;
+	return code;
+}
+void cohen(float X1, float Y1, float X2, float Y2)
+{
+	float x, y;
+	int  accept = 0, done = 0, code_p, code_q, code;
+
+	code_p = compute(X1, Y1);
+	code_q = compute(X2, Y2);
+	do
+	{
+		if (!(code_p | code_q))
+		{
+			accept = 1;
+			done = 1;
 		}
-		
-	} 
-	while (!done);
+		else if (code_p & code_q)
+			done = 1;
+		else
+		{
+			code = code_p ? code_p : code_q;
+			if (code & TOP)
+			{
+				x = X1 + (X2 - X1) * (ymax - Y1) / (Y2 - Y1);
+				y = ymax;
+			}
+			else if (code & BOTTOM)
+			{
+				x = X1 + (X2 - X1) * (ymin - Y1) / (Y2 - Y1);
+				y = ymin;
+			}
+			else if (code & RIGHT)
+			{
+				y = Y1 + (Y2 - Y1) * (xmax - X1) / (X2 - X1);
+				x = xmax;
+			}
+			else
+			{
+				y = Y1 + (Y2 - Y1) * (xmin - X1) / (X2 - X1);
+				x = xmin;
+			}
+			if (code == code_p)
+			{
+				X1 = x;
+				Y1 = y;
+				code_p = compute(X1, Y1);
+			}
+			else
+			{
+				X2 = x;
+				Y2 = y;
+				code_q = compute(X2, Y2);
+			}
+		}
+	} while (!done);
 
 	if (accept)
 	{
-		float sx = (umax - umin) / (xmax - xmin);
-		float sy = (vmax - vmin) / (ymax - ymin);
-		x1 = sx * x1 + umin - sx * xmin;
-		y1 = sy * y1 + vmin - sy * ymin;
-		x2 = sx * x2 + umin - sx * xmin;
-		y2 = sy * y2 + vmin - sy * ymin;
-	}
-	glBegin(GL_LINES);
-			glVertex2f(x1, y1);
-			glVertex2f(x2, y2);
-			glEnd();
-			glFlush();
-	
-}
+		sx = (xvmax - xvmin) / (xmax - xmin);
+		sy = (yvmax - yvmin) / (ymax - ymin);
+		vx1 = xvmin + (X1 - xmin) * sx;
+		vy1 = xvmin + (Y1 - ymin) * sy;
+		vx2 = xvmin + (X2 - xmin) * sx;
+		vy2 = xvmin + (Y2 - ymin) * sy;
 
+	}
+}
 void display()
 {
-		glClearColor(1, 1, 1, 1);
-		glClear(GL_COLOR_BUFFER_BIT);
-		glColor3f(1, 0, 0);
-		glBegin(GL_LINE_LOOP);
-		glVertex2f(xmin, ymin);
-		glVertex2f(xmin, ymax);
-		glVertex2f(xmax, ymax);
-		glVertex2f(xmax, ymin);
-		glEnd();
-		glColor3f(0, 0, 1); 
-		glBegin(GL_LINES);
-			glVertex2f(x1, y1);
-			glVertex2f(x2, y2);
-		glEnd();
+	glClear(GL_COLOR_BUFFER_BIT);
 
-		glColor3f(0, 1, 0); 
-		glBegin(GL_LINE_LOOP); 
-			glVertex2f(umin, vmin);
-			glVertex2f(umin, vmax);
-			glVertex2f(umax, vmax);
-			glVertex2f(umax, vmin);
-		glEnd(); 
-		cohensutherland();
-		glFlush();
+	glColor3f(1, 1, 1);
+	glLineWidth(2);
+	// The below code is used to draw a enterd lines
+	glBegin(GL_LINES);
+	glVertex2d(X1, Y1);
+	glVertex2d(X2, Y2);
+	glEnd();
+
+	glColor3f(1, 1, 1);
+	// The below code is used to draw a window.
+	glBegin(GL_LINE_LOOP);
+	glVertex2f(xmin, ymin);
+	glVertex2f(xmax, ymin);
+	glVertex2f(xmax, ymax);
+	glVertex2f(xmin, ymax);
+	glEnd();
+
+	cohen(X1, Y1, X2, Y2);
+
+	glColor3f(1, 1, 1);
+	// The below code is for the view port 
+	glBegin(GL_LINE_LOOP);
+	glVertex2f(xvmin, yvmin);
+	glVertex2f(xvmax, yvmin);
+	glVertex2f(xvmax, yvmax);
+	glVertex2f(xvmin, yvmax);
+	glEnd();
+
+	glColor3f(1, 1, 1);
+	// The clipped coordinates at the viewport.
+	glBegin(GL_LINES);
+	glVertex2d(vx1, vy1);
+	glVertex2d(vx2, vy2);
+	glEnd();
+	glFlush();
 }
-void main(int argc,char **argv)
+void myinit()
 {
-
-		glutInit(&argc, argv);
-		glutInitDisplayMode(GLUT_RGB | GLUT_SINGLE); 
-		glutInitWindowPosition(100, 100);
-		glutInitWindowSize(500, 500);
-		glutCreateWindow("CLIPPING ALGORITHM");
-		myinit();
-		printf("Enter the clipping window points xmin,xmax,ymin,ymax");
-		scanf_s("%f%f%f%f", &xmin, &xmax, &ymin, &ymax); 
-		printf("Enter the display window points umin,umax,vmin,vmax");
-		scanf_s("%f%f%f%f", &umin, &umax, &vmin, &vmax);
-		printf("\nEnter the first point x1,y1\n");
-		scanf_s("%f%f", &x1, &y1);
-		printf("\nEnter the second point x2,y2\n");
-		scanf_s("%f%f", &x2, &y2);
-		glutDisplayFunc(display);
-		glutMainLoop();
+	glClearColor(0, 0, 0, 1);
+	gluOrtho2D(0, 500, 0, 500);
+}
+void main(int argc, char** argv)
+{
+	printf("\n Enter the points\n");
+	scanf_s("%f%f%f%f", &X1, &Y1, &X2, &Y2);
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+	glutInitWindowSize(500, 500);
+	glutCreateWindow("cohen sutherland: C Tathva");
+	glutDisplayFunc(display);
+	myinit();
+	glutMainLoop();
 }
